@@ -1,1 +1,248 @@
-Hello World
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>baseball benchmarks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="css/bootstrap.css" rel="stylesheet" media="screen">
+<style>
+  body {padding-top: 50px;}
+</style>
+<!-- <script type="text/javascript" src="https://stackedit.io/libs/MathJax/MathJax.js?config=TeX-AMS_HTML"></script> -->
+</head>
+
+<body>
+    <!-- <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+    </div>
+  </div> -->
+	
+<div class="container">
+  <div class="jumbotron">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="page-header">
+          <h1 id="benchmark-on-baseball-data">Benchmark on <em>baseball</em> data:</h1>
+          <h3 id="versions">dplyr (0.1) and data.table (1.8.10)</h3>
+        </div>
+      </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="background">Background</h2>
+    </div>
+  </div>
+</div>
+
+<p><span class="text-success">dplyr</span> looks like a fantastic initiative. Congratulations to Hadley and Romain.</p>
+
+<p>The recent CRAN release of <span class="text-success">dplyr</span> showcased a <a href="http://cran.r-project.org/web/packages/dplyr/vignettes/benchmark-baseball.html">benchmarking vignette using baseball data</a>. Following that, we noticed under the comments section of the <a href="http://blog.rstudio.org/2014/01/17/introducing-dplyr/">Rstudio blog post</a>:</p>
+
+<blockquote>
+  <p><span class="text-primary">Comment from a reader:</span> From the introduction vignette: “<span class="text-success">dplyr</span> also provides <span class="text-success">data.table</span> methods for all verbs. While <span class="text-success">data.table</span> is extremely, fast, the current benchmarks suggest that <span class="text-success">dplyr</span> is 2-3x faster for most single operations, and up to 10x faster for grouped summaries (see the benchmark-baseball vignette for more details).” This is really really really exciting. I can’t wait to try this package out!! Yay for Hadley and collaborators!!!!</p>
+  
+  <p><span class="text-primary">Hadley:</span> Ooops, I forgot to remove that statement from the vignette. That was based on some initial benchmarks when I didn’t understand <span class="text-success">data.table</span> that well. I’d now claim that <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> are pretty similar for most operations. Sometimes <span class="text-success">data.table</span> is faster, sometimes <span class="text-success">dplyr</span> is faster.</p>
+</blockquote>
+
+<p>Hadley had asked us in advance what we thought of the baseball vignette and we had several rounds of emails to correct it. But unfortunately due to an oversight the vignette went to CRAN unchanged.</p>
+
+<blockquote>
+  <p><span class="text-primary">Hadley:</span> It was an oversight, and I’ve filed a bug to remind me to fix it for the next version.</p>
+</blockquote>
+
+<p>Since the vignette is on CRAN though and the comparison is to <span class="text-success">data.table</span>, and since our users have been asking us about the comparison made to <span class="text-success">data.table</span>, we feel it is appropriate to respond. Therefore for the sake of completeness, here’s the benchmark for the relevant cases.</p> 
+
+<div class="alert alert-dismissable alert-warning">
+    <button type="button", class="close", data-dismiss="alert"></button>
+    <p>Note that we perform the benchmark with <span class="text-success">data.table 1.8.10</span> as on CRAN currently. Many improvements are in <span class="text-success">1.8.11</span> which we will ignore here.</p></div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="initial-setup">Initial setup</h2>
+    </div>
+  </div>
+</div>
+
+<blockquote>
+  <p><span class="label label-primary">Note 1</span> An important point is that dplyr’s <code>group_by</code> should be <em>included</em> in the benchmarks as it is an essential precursor for grouping operations in <span class="text-success">dplyr</span>, whereas <code>setkey</code> is <strong>not</strong> mandatory for <span class="text-success">data.table</span> for grouping. If <code>setkey</code> is to be used in the analysis, of course it must be timed as well.</p>
+  
+  <p><span class="label label-primary">Note 2</span> A common method to benchmark <em>big-data</em> is to run <code>system.time</code> 3 times and choose the minimum (to report timings without effects of cache). However the <code>Batting</code> data size here is <em>so small</em> (10MB) that it almost fits in cache! Relative speed at such small granularity seems utterly pointless to us. But people may believe it is informative. We’ll therefore use <span class="text-success">microbenchmark</span> as well on the same 10MB dataset.</p>
+</blockquote>
+
+<p>So, let’s start with initial setup as follows. Note that we don't <em>pre-calculate</em> <code>group_by</code> operations here.</p>
+
+<pre><code>require(Lahman)
+require(dplyr)
+require(data.table)
+require(microbenchmark)
+
+batting_df = tbl_df(Batting)    # for dplyr's data.frame
+batting_dt = tbl_dt(Batting)    # for dplyr's data.table
+DT = data.table(Batting)        # for native data.table
+</code></pre><div class="se-section-delimiter"></div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="summarise">1. Summarise</h2>
+    </div>
+  </div>
+</div>
+<p>Compute the average number of at bats for each player:</p>
+
+<pre><code>microbenchmark(
+    dplyr_df = group_by(batting_df, playerID) %.% summarise(ab = mean(AB)),
+    dplyr_dt = group_by(batting_dt, playerID) %.% summarise(ab = mean(AB)), 
+    dt_raw   = DT[, list(ab=mean(AB)), by=playerID],
+    times    = 100)
+
+Unit: milliseconds
+     expr      min       lq   median        uq      max neval
+ dplyr_df 37.51670 38.61942 39.36357  41.69157 109.1514   100
+ dplyr_dt 68.30773 75.87789 79.31867 135.32441 162.7321   100
+   dt_raw 38.22706 39.66757 43.07817  45.80393 117.2201   100
+</code></pre>
+
+<p>It shows a very different picture now. The time to <code>group_by</code> was excluded in the vignette,  but <code>summarise</code> can’t run without <code>group_by</code> having been run first.</p><div class="se-section-delimiter"></div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="arrange">2. Arrange</h2>
+    </div>
+  </div>
+</div>
+
+<p>Arrange by year within each player:</p>
+
+<pre><code>microbenchmark(
+  dplyr_df = arrange(batting_df, playerID, yearID),
+  dplyr_dt = arrange(batting_dt, playerID, yearID),
+  dt_raw   = setkey(copy(DT), playerID, yearID),
+  times    = 100
+)  
+
+Unit: milliseconds
+     expr       min        lq    median        uq      max neval
+ dplyr_df  58.35734  63.06669  64.62387  66.86399 133.6722   100
+ dplyr_dt 610.86968 627.17217 676.60503 689.93259 723.6959   100
+   dt_raw  29.16627  32.27533  33.64683  36.75697 106.7013   100
+</code></pre>
+
+<p>Once again, a very different picture. This is because in the benchmarks from <span class="text-success">dplyr</span> vignette, the ordering by <code>playerID</code> was already done in <code>players_dt</code>. So basically, the ordering here had to be done <strong>only on</strong> <code>yearID</code> for the <code>dplyr_*</code> cases!</p>
+
+<div class="alert alert-dismissable alert-warning">
+    <button type="button", class="close", data-dismiss="alert"></button>
+    Note that <code>dplyr_dt</code> performs <strong>much worse</strong> than <span class="text-success">data.table</span> run directly. Hadley has said that he considers such differences to be bugs in <span class="text-success">dplyr</span>.</div>
+
+</blockquote><div class="se-section-delimiter"></div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="filter">3. Filter</h2>
+    </div>
+  </div>
+</div>
+
+<p>Find the year for which each player played the most games:</p>
+
+<pre><code>microbenchmark(
+    dplyr_df = group_by(batting_df, playerID) %.% filter(G == max(G)),
+    dplyr_dt = group_by(batting_dt, playerID) %.% filter(G == max(G)),
+    dt_raw   = DT[DT[, .I[G==max(G)], by=playerID]$V1],
+    times = 100
+)
+
+Unit: milliseconds
+     expr       min        lq    median        uq      max neval
+ dplyr_df  84.75893  88.29261  90.86771  96.03549 181.3004   100
+ dplyr_dt 105.82635 112.10389 116.55127 124.82832 202.0836   100
+   dt_raw  68.33252  73.67968  74.88609  77.91639 165.2599   100
+</code></pre>
+
+<p>Because the <span class="text-success">data.table</span> expression is not a <em>single command</em> (for <code>dt_raw</code>), Hadley chose not to benchmark it. Once again, it shows a different picture.</p><div class="se-section-delimiter"></div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="summarise">4. Mutate</h2>
+    </div>
+  </div>
+</div>
+
+<p>The benchmark in <span class="text-success">dplyr</span> vignette is incorrect because it doesn’t add a column (doesn’t use <code>:=</code> at all), rather it aggregates. We'll just highlight one case here - <code>rank</code>.</p>
+
+<pre><code>microbenchmark(
+   dplyr_df  = group_by(batting_df, playerID) %.% mutate(rank = rank(desc(AB))),
+   dplyr_dt  = group_by(batting_dt, playerID) %.% mutate(rank = rank(desc(AB))),
+   dt_raw    = DT[, rank := rank(desc(AB)), by=playerID],
+   times = 10
+)
+# remove rank col from DT
+DT[, rank := NULL]
+
+Unit: seconds
+     expr      min       lq   median       uq      max neval
+ dplyr_df 1.173205 1.183997 1.195302 1.266843 1.518752    10
+ dplyr_dt 1.205231 1.255513 1.262523 1.279185 1.328591    10
+   dt_raw 1.101572 1.111967 1.120616 1.130896 1.155168    10
+</code></pre>
+
+<p>This is a bit hard to benchmark because the <em>philosophy</em> of <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> are quite different. <span class="text-success">data.table</span> is designed for adding columns by reference in place (therefore columns are over allocated during <span class="text-success">data.table</span> creation). But <span class="text-success">data.table</span> doesn’t like doing this. However, when benchmarking one should be benchmarking the equivalent of an operation in each tool, not how one <em>thinks</em> the design should be.</p>
+
+<p>But if you insist, this can be accomplished the <span class="text-success">dplyr</span> way, using <span class="text-success">data.table's</span> <code>shallow</code> function which, like <span class="text-success">dplyr's</span> <code>mutate</code>, <em>shallow copies</em> the data. Here’s the benchmark:</p>
+
+<pre><code>microbenchmark(
+   dplyr_df  = group_by(batting_df, playerID) %.% mutate(rank = rank(desc(AB))),
+   dplyr_dt  = group_by(batting_dt, playerID) %.% mutate(rank = rank(desc(AB))),
+   dt_raw    = data.table:::shallow(DT)[, rank := rank(desc(AB)), by=playerID],
+   times = 10
+)
+
+Unit: seconds
+     expr      min       lq   median       uq      max neval
+ dplyr_df 1.165308 1.179277 1.214480 1.269659 1.300810    10
+ dplyr_dt 1.183548 1.210675 1.257438 1.270460 1.275579    10
+   dt_raw 1.106987 1.109709 1.120783 1.137172 1.192628    10
+</code></pre>
+
+<p>So, this illustrates once again the methods that are available in <span class="text-success">data.table</span>. The micro timings (!) on 10MB (!) compare favourably.</p>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+      <h2 id="summarise">To summarise</h2>
+    </div>
+  </div>
+</div>
+<p> The benchmarks should convince you that there aren't any <em>speed</em> differences between <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> on this (small) dataset. 
+	
+<p>What would be really interesting is to <strong>repeat these benchmarks on a much bigger data</strong> <em>with increasing unique groupings</em> to figure out the performance on <em>big-data</em> including how well both of these packages scale. This is very much on our agenda and we plan to do this ASAP.</p>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="page-header">
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="row">
+    <div class="col-lg-12">  
+      <ul class="list-unstyled">
+	    <li><span>Arun Srinivasan and <a href="http://datatable.r-forge.r-project.org/">Matt Dowle</a>.</span><span class="pull-right"><a href="#top">Back to top</a></li>
+	    <li>Written in Markdown and exported as html using <a href="https://stackedit.io/#">Stackedit</a>.</li>
+		<li>Custom styled with <a href="http://getbootstrap.com/">Bootstrap</a> using <a href="http://bootswatch.com/cerulean/">Cerulean</a> theme from <a href="http://bootswatch.com/">Bootwatch.</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+</div></body>
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.min.js"></script>
+
+</html>
