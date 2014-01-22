@@ -211,7 +211,7 @@ Unit: seconds
    dt_raw 1.106987 1.109709 1.120783 1.137172 1.192628    10
 </code></pre>
 
-<p>So, this illustrates once again the methods that are available in <span class="text-success">data.table</span>. The micro timings (!) on 10MB (!) compare favourably.</p>
+<p>So, this illustrates once again the methods that are available in <span class="text-success">data.table</span>.</p>
 
 <div class="row">
   <div class="col-lg-12">
@@ -220,7 +220,7 @@ Unit: seconds
     </div>
   </div>
 </div>
-<p> The benchmarks should convince you that there aren't any <em>speed</em> differences between <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> on this (small) dataset. 
+<p> The benchmarks should convince you that there aren't any <em>speed</em> differences between <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> and that the micro timings <strong>on 10MB</strong> compare favourably.
 	
 <p>What would be really interesting is to <strong>repeat these benchmarks on a much bigger data</strong> <em>with increasing unique groupings</em> to figure out the performance on <em>big-data</em> including how well both of these packages scale. This is very much on our agenda and we plan to do this ASAP.</p>
 
