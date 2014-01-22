@@ -193,7 +193,7 @@ Unit: seconds
    dt_raw 1.101572 1.111967 1.120616 1.130896 1.155168    10
 </code></pre>
 
-<p>This is a bit hard to benchmark because the <em>philosophy</em> of <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> are quite different. <span class="text-success">data.table</span> is designed for adding columns by reference in place (therefore columns are over allocated during <span class="text-success">data.table</span> creation). But <span class="text-success">data.table</span> doesn’t like doing this. However, when benchmarking one should be benchmarking the equivalent of an operation in each tool, not how one <em>thinks</em> the design should be.</p>
+<p>This is a bit hard to benchmark because the <em>philosophy</em> of <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> are quite different. <span class="text-success">data.table</span> is designed for adding columns by reference in place (therefore columns are over allocated during <span class="text-success">data.table</span> creation). But <span class="text-success">dplyr</span> doesn’t like doing this. However, when benchmarking one should be benchmarking the equivalent of an operation in each tool, not how one <em>thinks</em> the design should be.</p>
 
 <p>But if you insist, this can be accomplished the <span class="text-success">dplyr</span> way, using <span class="text-success">data.table's</span> <code>shallow</code> function which, like <span class="text-success">dplyr's</span> <code>mutate</code>, <em>shallow copies</em> the data. Here’s the benchmark:</p>
 
@@ -220,9 +220,11 @@ Unit: seconds
     </div>
   </div>
 </div>
-<p> The benchmarks should convince you that there aren't any <em>speed</em> differences between <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> here and that the micro timings on <strong>10MB</strong> compare favourably.
+<ul>
+	<li><p> The micro benchmark results are not that different between <span class="text-success">dplyr</span> and <span class="text-success">data.table</span> here. The 2-3x faster and 10x faster figures were an oversight.</li>
 	
-<p>What would be really interesting is to <strong>repeat these benchmarks on a much bigger data</strong> <em>with increasing unique groupings</em> to figure out the performance on <em>big-data</em> including how well both of these packages scale. This is very much on our agenda and we plan to do this ASAP.</p>
+<li><p>We'll propose a range of benchmarks on large data in a future note once the next version of <span class="text-success">data.table</span> has been released to CRAN.</p></li>
+</ul>
 
 <div class="row">
   <div class="col-lg-12">
