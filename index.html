@@ -92,7 +92,7 @@ DT = data.table(Batting)        # for native data.table
     </div>
   </div>
 </div>
-<p>Compute the average number of at bats for each player:</p>
+<p>Compute the average number of bats for each player:</p>
 
 <pre><code>microbenchmark(
     dplyr_df = group_by(batting_df, playerID) %.% summarise(ab = mean(AB)),
